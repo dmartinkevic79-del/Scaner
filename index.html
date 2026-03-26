@@ -3,151 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WB Scan Pro + Camera Switch</title>
+    <title>WB SCAN PRO</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; background-color: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; }
-        #reader { width: 100%; max-width: 500px; border-radius: 12px; overflow: hidden; margin-bottom: 10px; border: 1px solid #444; background: #000; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 500px; margin-bottom: 15px; }
-        button { padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: white; font-size: 14px; transition: 0.2s; }
-        .btn-switch { background: #6c757d; grid-column: span 2; } /* Кнопка смены камер */
+        body { font-family: sans-serif; background-color: #121212; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 10px; }
+        #reader { width: 100%; max-width: 500px; border-radius: 15px; overflow: hidden; border: 2px solid #333; background: #000; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 500px; margin: 15px 0; }
+        button { padding: 18px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; color: white; font-size: 14px; }
+        
+        /* КНОПКА ПЕРЕКЛЮЧЕНИЯ - ТЕПЕРЬ СИНЯЯ И ЗАМЕТНАЯ */
+        .btn-switch { background: #007bff; grid-column: span 2; border: 2px solid #0056b3; box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
+        
         .btn-download { background: #28a745; }
         .btn-clear { background: #dc3545; }
-        .btn-torch { background: #f1c40f; color: #000; grid-column: span 2; display: none; }
+        .btn-torch { background: #ffc107; color: #000; grid-column: span 2; display: none; margin-top: 5px; }
         
-        #list-container { width: 100%; max-width: 500px; background: #2d2d2d; border-radius: 12px; padding: 15px; box-sizing: border-box; }
-        .status-bar { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #aaa; border-bottom: 1px solid #444; padding-bottom: 8px; }
-        ul { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
-        li { padding: 10px; border-bottom: 1px solid #3d3d3d; font-family: monospace; display: flex; justify-content: space-between; color: #00ff88; }
-        .dup-error { color: #ff4757; text-align: center; font-weight: bold; margin: 5px; display: none; }
+        #list-container { width: 100%; max-width: 500px; background: #1e1e1e; border-radius: 15px; padding: 15px; box-sizing: border-box; }
+        .status-bar { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        ul { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+        li { padding: 12px; border-bottom: 1px solid #2d2d2d; font-family: monospace; display: flex; justify-content: space-between; color: #00ff88; }
+        .dup-error { position: fixed; top: 10%; background: #ff4757; color: white; padding: 15px; border-radius: 10px; display: none; z-index: 100; font-weight: bold; }
     </style>
 </head>
 <body>
 
+    <div id="dup-msg" class="dup-error">⚠️ УЖЕ В СПИСКЕ</div>
     <div id="reader"></div>
-    <div id="dup-msg" class="dup-error">ПОВТОР! УЖЕ В СПИСКЕ</div>
 
     <div class="controls">
-        <button class="btn-switch" onclick="switchCamera()">СМЕНИТЬ КАМЕРУ</button>
-        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">ВКЛЮЧИТЬ ФОНАРИК</button>
+        <button class="btn-switch" onclick="switchCamera()">🔄 СМЕНИТЬ КАМЕРУ (ОСНОВНАЯ/СЕЛФИ)</button>
+        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ВКЛЮЧИТЬ ФОНАРИК</button>
         <button class="btn-download" onclick="downloadTxt()">ВЫГРУЗИТЬ .TXT</button>
         <button class="btn-clear" onclick="clearList()">ОЧИСТИТЬ ВСЁ</button>
     </div>
 
     <div id="list-container">
-        <div class="status-bar"><span>Уникальных:</span> <span id="count" style="color:white; font-weight:bold;">0</span></div>
+        <div class="status-bar">
+            <span>Уникальных:</span>
+            <span id="count" style="font-size: 20px; font-weight: bold;">0</span>
+        </div>
         <ul id="scanned-codes"></ul>
     </div>
 
     <script>
         let codes = JSON.parse(localStorage.getItem('wb_codes')) || [];
         let html5QrCode;
-        let isTorchOn = false;
-        let currentCameraId = null;
         let cameras = [];
+        let currentCamIdx = 0;
+        let isTorchOn = false;
 
-        window.onload = () => {
-            codes.slice().reverse().forEach(c => renderItem(c));
-            document.getElementById('count').innerText = codes.length;
-            initScanner();
+        window.onload = async () => {
+            renderList();
+            try {
+                cameras = await Html5Qrcode.getCameras();
+                if (cameras.length > 0) {
+                    // Пытаемся сразу найти заднюю камеру по слову Back или Rear
+                    let backIdx = cameras.findIndex(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'));
+                    currentCamIdx = backIdx !== -1 ? backIdx : 0;
+                    startScanner(cameras[currentCamIdx].id);
+                } else { alert("Камеры не найдены"); }
+            } catch (err) { alert("Разрешите доступ к камере в настройках браузера!"); }
         };
 
-        async function initScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            try {
-                // Получаем список всех доступных камер
-                cameras = await Html5Qrcode.getCameras();
-                if (cameras && cameras.length > 0) {
-                    // Пытаемся найти заднюю камеру по умолчанию
-                    let backCam = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'));
-                    currentCameraId = backCam ? backCam.id : cameras[0].id;
-                    startWithCamera(currentCameraId);
-                } else {
-                    alert("Камеры не найдены");
-                }
-            } catch (err) {
-                console.error("Ошибка инициализации", err);
-            }
+        function startScanner(camId) {
+            if (html5QrCode) { html5QrCode.stop().then(() => doStart(camId)); } 
+            else { doStart(camId); }
         }
 
-        function startWithCamera(cameraId) {
+        function doStart(camId) {
+            html5QrCode = new Html5Qrcode("reader");
             const config = { 
                 fps: 20, 
-                qrbox: { width: 250, height: 150 },
-                videoConstraints: { focusMode: "continuous" }
+                qrbox: { width: 280, height: 160 },
+                aspectRatio: 1.0
             };
-
-            html5QrCode.start(cameraId, config, onScanSuccess)
+            html5QrCode.start(camId, config, onScanSuccess)
             .then(() => {
                 const caps = html5QrCode.getRunningTrackCapabilities();
                 document.getElementById('torch-button').style.display = caps.torch ? 'block' : 'none';
-                if (!caps.torch) isTorchOn = false;
-            })
-            .catch(err => console.error("Ошибка запуска камеры", err));
+            }).catch(e => console.error(e));
         }
 
         async function switchCamera() {
-            if (cameras.length < 2) return alert("Доступна только одна камера");
-            
-            // Находим индекс текущей камеры и берем следующую
-            let currentIndex = cameras.findIndex(c => c.id === currentCameraId);
-            let nextIndex = (currentIndex + 1) % cameras.length;
-            currentCameraId = cameras[nextIndex].id;
-
-            if (html5QrCode.isScanning) {
-                await html5QrCode.stop();
-                startWithCamera(currentCameraId);
-            }
+            if (cameras.length < 2) return alert("У вас только одна камера");
+            currentCamIdx = (currentCamIdx + 1) % cameras.length;
+            await html5QrCode.stop();
+            startScanner(cameras[currentCamIdx].id);
         }
 
-        function onScanSuccess(decodedText) {
-            if (codes.includes(decodedText)) {
-                showError();
+        function onScanSuccess(text) {
+            if (codes.includes(text)) {
+                document.getElementById('dup-msg').style.display = 'block';
+                setTimeout(() => document.getElementById('dup-msg').style.display = 'none', 1200);
                 return;
             }
-            codes.push(decodedText);
+            codes.push(text);
             localStorage.setItem('wb_codes', JSON.stringify(codes));
-            renderItem(decodedText);
-            document.getElementById('count').innerText = codes.length;
-            new Audio('https://www.soundjay.com/buttons/beep-07.mp3').play();
+            renderList();
+            new Audio('https://www.soundjay.com/buttons/beep-07.mp3').play().catch(() => {});
         }
 
-        function renderItem(text) {
+        function renderList() {
             const list = document.getElementById('scanned-codes');
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${text}</span> <span style="color:#666;font-size:10px;">${new Date().toLocaleTimeString()}</span>`;
-            list.prepend(li);
-        }
-
-        function showError() {
-            const msg = document.getElementById('dup-msg');
-            msg.style.display = 'block';
-            setTimeout(() => msg.style.display = 'none', 1500);
+            list.innerHTML = '';
+            codes.slice().reverse().forEach(text => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${text}</span> <span style="color:#555; font-size:10px;">${new Date().toLocaleTimeString()}</span>`;
+                list.appendChild(li);
+            });
+            document.getElementById('count').innerText = codes.length;
         }
 
         async function toggleTorch() {
             isTorchOn = !isTorchOn;
-            try {
-                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
-                document.getElementById('torch-button').innerText = isTorchOn ? "ВЫКЛЮЧИТЬ ФОНАРИК" : "ВКЛЮЧИТЬ ФОНАРИК";
-            } catch (e) { alert("Фонарик не поддерживается на этой камере"); }
+            await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+            document.getElementById('torch-button').innerText = isTorchOn ? "❌ ВЫКЛ ФОНАРИК" : "🔦 ВКЛ ФОНАРИК";
         }
 
         function downloadTxt() {
-            if (!codes.length) return alert("Список пуст");
+            if (codes.length === 0) return;
             const blob = new Blob([codes.join('\n')], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `WB_Export_${new Date().toISOString().slice(0,10)}.txt`;
+            a.download = `WB_SCAN_${new Date().toISOString().slice(0,10)}.txt`;
             a.click();
         }
 
         function clearList() {
-            if (confirm("Удалить все данные?")) {
+            if (confirm("Удалить всё?")) {
                 codes = [];
                 localStorage.removeItem('wb_codes');
-                document.getElementById('scanned-codes').innerHTML = '';
-                document.getElementById('count').innerText = '0';
+                renderList();
             }
         }
     </script>
