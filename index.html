@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WB Scan Pro Elite</title>
     
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png?v=2">
+    <link rel="apple-touch-icon" href="icon.png?v=2">
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -172,21 +172,16 @@
                 aspectRatio: 1.0
             };
 
-            // Явно запрашиваем заднюю камеру с расширенными правами
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .then(() => {
                 btn.style.display = 'none';
                 
-                // УСИЛЕННАЯ ПРОВЕРКА ФОНАРИКА ДЛЯ ANDROID
-                // Проверяем каждые полсекунды в течение минуты
                 let attempts = 0;
                 torchInterval = setInterval(() => {
                     checkTorch();
                     attempts++;
-                    // Если кнопка появилась или прошло 60 секунд - можно замедлить проверку
                     if (document.getElementById('torch-button').style.display === 'block') {
                         clearInterval(torchInterval);
-                        // Оставляем редкую проверку на случай сбоя
                         torchInterval = setInterval(checkTorch, 5000);
                     }
                     if (attempts > 120) clearInterval(torchInterval);
@@ -202,7 +197,6 @@
             try {
                 if (html5QrCode && html5QrCode.isScanning) {
                     const track = html5QrCode.getRunningTrackCapabilities();
-                    // На Android torch может быть скрыт внутри настроек или отсутствовать в capabilities в первые секунды
                     if (track && (track.torch || 'torch' in track)) {
                         document.getElementById('torch-button').style.display = 'block';
                     }
