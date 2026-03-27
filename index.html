@@ -3,284 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WB Scan Pro Elite</title>
-    
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
-    
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <title>WB Scan Pro</title>
+
+    <link rel="icon" type="image/png" href="icon.png?v=1">
+    <link rel="apple-touch-icon" href="icon.png?v=1">
+
     <style>
-        :root {
-            --bg: #0a0a0b;
-            --card: #161618;
-            --accent: #007aff;
-            --success: #32d74b;
-            --error: #ff453a;
-            --warning: #ffd60a;
-            --purple: #bf5af2;
-        }
-
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--bg); 
-            color: #ffffff; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            margin: 0; 
-            padding: 15px; 
-            min-height: 100vh;
-        }
-
-        #reader { 
-            width: 100%; 
-            max-width: 400px; 
-            border-radius: 28px; 
-            overflow: hidden; 
-            border: 1px solid #333; 
-            background: #000; 
-            aspect-ratio: 1 / 1; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .controls { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            width: 100%; 
-            max-width: 400px; 
-            margin: 20px 0; 
-        }
-
-        button { 
-            padding: 16px; 
-            border: none; 
-            border-radius: 16px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            color: white; 
-            font-size: 13px; 
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.2s ease;
-            -webkit-tap-highlight-color: transparent;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f6f6f9;
+            margin: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            height: 100vh;
+            color: #333;
         }
-
-        button:active { transform: scale(0.96); opacity: 0.8; }
-
-        .btn-start { background: var(--accent); grid-column: span 2; font-size: 15px; box-shadow: 0 4px 15px rgba(0,122,255,0.3); }
-        .btn-torch { background: var(--warning); color: #000; grid-column: span 2; display: none; border: 2px solid rgba(0,0,0,0.1); }
-        .btn-copy { background: var(--purple); grid-column: span 2; box-shadow: 0 4px 15px rgba(191,90,242,0.2); }
-        .btn-download { background: #2c2c2e; border: 1px solid var(--success); color: var(--success); }
-        .btn-clear { background: #2c2c2e; border: 1px solid var(--error); color: var(--error); }
-
-        #list-container { 
-            width: 100%; 
-            max-width: 400px; 
-            background: var(--card); 
-            border-radius: 24px; 
-            padding: 20px; 
-            box-sizing: border-box; 
-            border: 1px solid #2c2c2e;
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 400px;
         }
-
-        .status-bar { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            margin-bottom: 15px; 
-            padding-bottom: 12px; 
-            border-bottom: 1px solid #2c2c2e; 
+        #video {
+            width: 100%;
+            border-radius: 15px;
+            background: #000;
+            margin-bottom: 15px;
         }
-
-        .count-label { color: #8e8e93; font-size: 12px; font-weight: 600; }
-        .count-value { font-size: 28px; font-weight: 700; color: var(--success); }
-
-        ul { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
-        li { 
-            padding: 14px; 
-            border-bottom: 1px solid #2c2c2e; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
+        .btn {
+            background-color: #481173; /* Цвет Wildberries */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
         }
-
-        .code-text { font-family: 'SF Mono', 'Menlo', monospace; font-size: 16px; color: #fff; font-weight: 500; }
-        .time-text { color: #545456; font-size: 11px; }
-
-        .toast, .dup-error { 
-            position: fixed; top: 10%; left: 50%; transform: translateX(-50%); 
-            padding: 16px 32px; border-radius: 20px; display: none; z-index: 1000; 
-            font-weight: 600; text-align: center; width: 80%; backdrop-filter: blur(10px);
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #481173;
+            word-break: break-all;
         }
-        .toast { background: rgba(50, 215, 75, 0.9); color: #fff; }
-        .dup-error { background: rgba(255, 69, 58, 0.9); color: #fff; }
     </style>
 </head>
 <body>
 
-    <div id="toast-msg" class="toast">✅ СКОПИРОВАНО</div>
-    <div id="dup-msg" class="dup-error">⚠️ УЖЕ В СПИСКЕ</div>
-    
-    <div id="reader"></div>
+<div class="container">
+    <video id="video" autoplay playsinline></video>
+    <button class="btn" id="switchCamera">Сменить камеру</button>
+    <div id="result">Ожидание сканирования...</div>
+</div>
 
-    <div class="controls">
-        <button id="start-btn" class="btn-start" onclick="initScanner()">🚀 ЗАПУСТИТЬ СКАНЕР</button>
-        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ВКЛЮЧИТЬ ФОНАРИК</button>
-        <button class="btn-copy" onclick="copyToClipboard()">📋 КОПИРОВАТЬ СПИСОК</button>
-        <button class="btn-download" onclick="downloadTxt()">СКАЧАТЬ .TXT</button>
-        <button class="btn-clear" onclick="clearList()">ОЧИСТИТЬ</button>
-    </div>
+<script>
+    // Твоя логика сканера и переключения камер будет здесь
+    // Если нужно добавить скрипт обработки — скажи, я допишу!
+</script>
 
-    <div id="list-container">
-        <div class="status-bar">
-            <span class="count-label">ОБРАБОТАНО КОДОВ</span>
-            <span id="count" class="count-value">0</span>
-        </div>
-        <ul id="scanned-codes"></ul>
-    </div>
-
-    <script>
-        let codes = JSON.parse(localStorage.getItem('wb_codes')) || [];
-        let html5QrCode;
-        let isTorchOn = false;
-        let torchInterval;
-        const beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-
-        window.onload = () => { renderList(); };
-
-        async function initScanner() {
-            const btn = document.getElementById('start-btn');
-            btn.innerText = "ЗАГРУЗКА...";
-
-            if (html5QrCode) { 
-                try { 
-                    clearInterval(torchInterval);
-                    await html5QrCode.stop(); 
-                } catch(e) {} 
-            }
-            
-            html5QrCode = new Html5Qrcode("reader");
-
-            const config = { 
-                fps: 25, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
-
-            // Явно запрашиваем заднюю камеру с расширенными правами
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .then(() => {
-                btn.style.display = 'none';
-                
-                // УСИЛЕННАЯ ПРОВЕРКА ФОНАРИКА ДЛЯ ANDROID
-                // Проверяем каждые полсекунды в течение минуты
-                let attempts = 0;
-                torchInterval = setInterval(() => {
-                    checkTorch();
-                    attempts++;
-                    // Если кнопка появилась или прошло 60 секунд - можно замедлить проверку
-                    if (document.getElementById('torch-button').style.display === 'block') {
-                        clearInterval(torchInterval);
-                        // Оставляем редкую проверку на случай сбоя
-                        torchInterval = setInterval(checkTorch, 5000);
-                    }
-                    if (attempts > 120) clearInterval(torchInterval);
-                }, 500);
-            })
-            .catch((err) => { 
-                btn.innerText = "ОШИБКА КАМЕРЫ";
-                console.error(err);
-            });
-        }
-
-        function checkTorch() {
-            try {
-                if (html5QrCode && html5QrCode.isScanning) {
-                    const track = html5QrCode.getRunningTrackCapabilities();
-                    // На Android torch может быть скрыт внутри настроек или отсутствовать в capabilities в первые секунды
-                    if (track && (track.torch || 'torch' in track)) {
-                        document.getElementById('torch-button').style.display = 'block';
-                    }
-                }
-            } catch(e) {}
-        }
-
-        function onScanSuccess(text) {
-            let match = text.match(/\d{10}/);
-            let processed = match ? match[0] : text;
-
-            if (codes.includes(processed)) { showMsg('dup-msg'); return; }
-
-            codes.push(processed);
-            localStorage.setItem('wb_codes', JSON.stringify(codes));
-            beep.play().catch(() => {});
-            renderList();
-        }
-
-        async function toggleTorch() {
-            if (!html5QrCode) return;
-            isTorchOn = !isTorchOn;
-            try {
-                await html5QrCode.applyVideoConstraints({
-                    advanced: [{ torch: isTorchOn }]
-                });
-                const b = document.getElementById('torch-button');
-                b.innerText = isTorchOn ? "❌ ВЫКЛЮЧИТЬ" : "🔦 ВКЛЮЧИТЬ ФОНАРИК";
-                b.style.background = isTorchOn ? "#ff453a" : "#ffd60a";
-                b.style.color = isTorchOn ? "#fff" : "#000";
-            } catch (e) {
-                console.error("Ошибка фонарика:", e);
-            }
-        }
-
-        async function copyToClipboard() {
-            if (!codes.length) return;
-            try {
-                await navigator.clipboard.writeText(codes.join('\n'));
-                showMsg('toast-msg');
-            } catch (e) {
-                const t = document.createElement("textarea"); t.value = codes.join('\n');
-                document.body.appendChild(t); t.select(); document.execCommand('copy');
-                document.body.removeChild(t); showMsg('toast-msg');
-            }
-        }
-
-        function showMsg(id) {
-            const el = document.getElementById(id);
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 1500);
-        }
-
-        function renderList() {
-            const list = document.getElementById('scanned-codes');
-            list.innerHTML = '';
-            codes.slice().reverse().forEach(text => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="code-text">${text}</span> <span class="time-text">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
-                list.appendChild(li);
-            });
-            document.getElementById('count').innerText = codes.length;
-        }
-
-        function downloadTxt() {
-            if (!codes.length) return;
-            const b = new Blob([codes.join('\n')], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(b); a.download = `WB_SCAN.txt`; a.click();
-        }
-
-        function clearList() {
-            if (confirm("Удалить все данные?")) { 
-                codes = []; 
-                localStorage.removeItem('wb_codes'); 
-                renderList(); 
-            }
-        }
-    </script>
 </body>
 </html>
