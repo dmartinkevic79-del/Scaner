@@ -73,7 +73,7 @@
         button:active { transform: scale(0.96); opacity: 0.8; }
 
         .btn-start { background: var(--accent); grid-column: span 2; font-size: 15px; box-shadow: 0 4px 15px rgba(0,122,255,0.3); }
-        .btn-torch { background: var(--warning); color: #000; grid-column: span 2; display: none; }
+        .btn-torch { background: var(--warning); color: #000; grid-column: span 2; display: none; border: 2px solid rgba(0,0,0,0.1); }
         .btn-copy { background: var(--purple); grid-column: span 2; box-shadow: 0 4px 15px rgba(191,90,242,0.2); }
         .btn-download { background: #2c2c2e; border: 1px solid var(--success); color: var(--success); }
         .btn-clear { background: #2c2c2e; border: 1px solid var(--error); color: var(--error); }
@@ -107,12 +107,6 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .code-text { font-family: 'SF Mono', 'Menlo', monospace; font-size: 16px; color: #fff; font-weight: 500; }
@@ -136,7 +130,7 @@
 
     <div class="controls">
         <button id="start-btn" class="btn-start" onclick="initScanner()">🚀 ЗАПУСТИТЬ СКАНЕР</button>
-        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ФОНАРИК</button>
+        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ВКЛЮЧИТЬ ФОНАРИК</button>
         <button class="btn-copy" onclick="copyToClipboard()">📋 КОПИРОВАТЬ СПИСОК</button>
         <button class="btn-download" onclick="downloadTxt()">СКАЧАТЬ .TXT</button>
         <button class="btn-clear" onclick="clearList()">ОЧИСТИТЬ</button>
@@ -154,6 +148,7 @@
         let codes = JSON.parse(localStorage.getItem('wb_codes')) || [];
         let html5QrCode;
         let isTorchOn = false;
+        let torchInterval;
         const beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
 
         window.onload = () => { renderList(); };
@@ -162,7 +157,13 @@
             const btn = document.getElementById('start-btn');
             btn.innerText = "ЗАГРУЗКА...";
 
-            if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
+            if (html5QrCode) { 
+                try { 
+                    clearInterval(torchInterval);
+                    await html5QrCode.stop(); 
+                } catch(e) {} 
+            }
+            
             html5QrCode = new Html5Qrcode("reader");
 
             const config = { 
@@ -171,22 +172,41 @@
                 aspectRatio: 1.0
             };
 
+            // Явно запрашиваем заднюю камеру с расширенными правами
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .then(() => {
                 btn.style.display = 'none';
-                let c = 0;
-                const i = setInterval(() => {
+                
+                // УСИЛЕННАЯ ПРОВЕРКА ФОНАРИКА ДЛЯ ANDROID
+                // Проверяем каждые полсекунды в течение минуты
+                let attempts = 0;
+                torchInterval = setInterval(() => {
                     checkTorch();
-                    if (document.getElementById('torch-button').style.display === 'block' || ++c > 6) clearInterval(i);
-                }, 800);
+                    attempts++;
+                    // Если кнопка появилась или прошло 60 секунд - можно замедлить проверку
+                    if (document.getElementById('torch-button').style.display === 'block') {
+                        clearInterval(torchInterval);
+                        // Оставляем редкую проверку на случай сбоя
+                        torchInterval = setInterval(checkTorch, 5000);
+                    }
+                    if (attempts > 120) clearInterval(torchInterval);
+                }, 500);
             })
-            .catch(() => { btn.innerText = "ОШИБКА КАМЕРЫ"; });
+            .catch((err) => { 
+                btn.innerText = "ОШИБКА КАМЕРЫ";
+                console.error(err);
+            });
         }
 
         function checkTorch() {
             try {
-                const track = html5QrCode.getRunningTrackCapabilities();
-                if (track && track.torch) document.getElementById('torch-button').style.display = 'block';
+                if (html5QrCode && html5QrCode.isScanning) {
+                    const track = html5QrCode.getRunningTrackCapabilities();
+                    // На Android torch может быть скрыт внутри настроек или отсутствовать в capabilities в первые секунды
+                    if (track && (track.torch || 'torch' in track)) {
+                        document.getElementById('torch-button').style.display = 'block';
+                    }
+                }
             } catch(e) {}
         }
 
@@ -203,13 +223,19 @@
         }
 
         async function toggleTorch() {
+            if (!html5QrCode) return;
             isTorchOn = !isTorchOn;
             try {
-                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
+                await html5QrCode.applyVideoConstraints({
+                    advanced: [{ torch: isTorchOn }]
+                });
                 const b = document.getElementById('torch-button');
                 b.innerText = isTorchOn ? "❌ ВЫКЛЮЧИТЬ" : "🔦 ВКЛЮЧИТЬ ФОНАРИК";
                 b.style.background = isTorchOn ? "#ff453a" : "#ffd60a";
-            } catch (e) {}
+                b.style.color = isTorchOn ? "#fff" : "#000";
+            } catch (e) {
+                console.error("Ошибка фонарика:", e);
+            }
         }
 
         async function copyToClipboard() {
@@ -249,7 +275,11 @@
         }
 
         function clearList() {
-            if (confirm("Удалить все данные?")) { codes = []; localStorage.removeItem('wb_codes'); renderList(); }
+            if (confirm("Удалить все данные?")) { 
+                codes = []; 
+                localStorage.removeItem('wb_codes'); 
+                renderList(); 
+            }
         }
     </script>
 </body>
