@@ -1,124 +1,28 @@
-<script>
-    // Предполагается, что переменные html5QrCode, codes, isTorchOn и элемент beep 
-    // инициализированы выше в вашем коде.
-
-    function onScanSuccess(decodedText) {
-        let match = decodedText.match(/\d{10,}/);
-        let processed = match ? match[0] : decodedText;
-        
-        // Проверка на дубликаты
-        if (codes.some(item => item.text === processed)) {
-            showMsg('dup-msg');
-            return;
-        }
-        
-        // Форматируем дату и время (например: 07.04.2026, 15:30:45)
-        const now = new Date();
-        const dateTimeStr = now.toLocaleString('ru-RU', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric', 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit' 
-        });
-        
-        codes.push({ text: processed, time: dateTimeStr });
-        localStorage.setItem('wb_codes_v3', JSON.stringify(codes));
-        
-        // Безопасный вызов звука
-        if (typeof beep !== 'undefined' && beep.play) {
-            beep.play().catch(() => {});
-        }
-        
-        renderList();
+function onScanSuccess(decodedText) {
+    let match = decodedText.match(/\d{10,}/);
+    let processed = match ? match[0] : decodedText;
+    
+    // Проверка на дубликаты
+    if (codes.some(item => item.text === processed)) {
+        showMsg('dup-msg');
+        return;
     }
-
-    function renderList() {
-        const list = document.getElementById('scanned-codes');
-        if (!list) return;
-        
-        list.innerHTML = '';
-        // Выводим с конца (последние отсканированные сверху)
-        codes.slice().reverse().forEach(item => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span class="code-text">${item.text}</span>
-                <span class="time-text">${item.time}</span>
-            `;
-            list.appendChild(li);
-        });
-        
-        const countEl = document.getElementById('count');
-        if (countEl) countEl.innerText = codes.length;
+    
+    // --- ТУТ МЫ ДОБАВИЛИ ДАТУ И ВРЕМЯ ---
+    const now = new Date();
+    const timeStr = now.toLocaleString('ru-RU', { 
+        day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    });
+    // ------------------------------------
+    
+    codes.push({ text: processed, time: timeStr });
+    localStorage.setItem('wb_codes_v3', JSON.stringify(codes));
+    
+    // Аккуратный вызов звука, чтобы код не падал, если аудио не успело прогрузиться
+    if (typeof beep !== 'undefined' && beep.play) {
+        beep.play().catch(() => {});
     }
-
-    async function copyToClipboard() {
-        if (!codes.length) return;
-        
-        // Форматируем строку: Код [Дата, Время]
-        const textToCopy = codes.map(c => `${c.text} [${c.time}]`).join('\n');
-        
-        try {
-            await navigator.clipboard.writeText(textToCopy);
-            showMsg('toast-msg');
-        } catch (err) {
-            // Фолбэк для старых браузеров
-            const textArea = document.createElement("textarea");
-            textArea.value = textToCopy;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            showMsg('toast-msg');
-        }
-    }
-
-    function downloadTxt() {
-        if (!codes.length) return;
-        
-        const content = codes.map(c => `${c.text} | ${c.time}`).join('\n');
-        const b = new Blob([content], { type: 'text/plain' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(b);
-        a.download = `WB_Export_${new Date().getTime()}.txt`;
-        a.click(); // Исправлен разрыв строки
-    }
-
-    function clearList() {
-        if (confirm("Удалить весь список?")) {
-            codes = [];
-            localStorage.removeItem('wb_codes_v3');
-            renderList();
-        }
-    }
-
-    function showMsg(id) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 2000);
-        }
-    }
-
-    function checkTorch() {
-        try {
-            const track = html5QrCode.getRunningTrackCapabilities();
-            const torchBtn = document.getElementById('torch-button');
-            if (track && track.torch && torchBtn) {
-                torchBtn.style.display = 'block';
-            }
-        } catch(e) {}
-    }
-
-    async function toggleTorch() {
-        isTorchOn = !isTorchOn;
-        try {
-            await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
-            const torchBtn = document.getElementById('torch-button');
-            if (torchBtn) {
-                torchBtn.innerText = isTorchOn ? "❌ ВЫКЛЮЧИТЬ" : "🔦 ВКЛЮЧИТЬ ФОНАРИК";
-            }
-        } catch (e) {}
-    }
-</script>
+    
+    renderList();
+}
