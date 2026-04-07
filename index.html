@@ -23,11 +23,11 @@
         .count-value { color: #32d74b; font-size: 28px; font-weight: 800; }
         ul { list-style: none; padding: 0; margin: 0; }
         li { 
-            display: flex; flex-direction: column; align-items: flex-start;
+            display: flex; justify-content: space-between; align-items: center;
             padding: 16px 0; border-top: 1px solid #2c2c2e;
         }
-        .code-text { font-size: 20px; font-weight: 500; color: #fff; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .time-text { font-size: 13px; color: #636366; font-family: monospace; }
+        .code-text { font-size: 20px; font-weight: 500; color: #fff; letter-spacing: 0.5px; }
+        .time-text { font-size: 14px; color: #636366; font-family: monospace; }
         .msg { 
             position: fixed; top: 10%; left: 50%; transform: translateX(-50%); 
             padding: 16px 32px; border-radius: 20px; display: none; z-index: 1000; 
@@ -59,55 +59,41 @@
         </div>
         <ul id="scanned-codes"></ul>
     </div>
-
     <script>
+        // Используем v3 для чистоты данных
         let codes = JSON.parse(localStorage.getItem('wb_codes_v3')) || [];
         let html5QrCode;
         let isTorchOn = false;
         const beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-
         window.onload = () => { renderList(); };
-
         async function initScanner() {
             const btn = document.getElementById('start-btn');
             btn.innerText = "ЗАГРУЗКА...";
             html5QrCode = new Html5Qrcode("reader");
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 25, qrbox: 250 }, 
-                    onScanSuccess
-                );
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 2
+                                                                        5, qrbox: 250 }, onScanSuccess);
                 btn.style.display = 'none';
                 setTimeout(checkTorch, 2000);
-            } catch (err) { 
-                btn.innerText = "ОШИБКА КАМЕРЫ"; 
-            }
+            } catch (err) { btn.innerText = "ОШИБКА КАМЕРЫ"; }
         }
-
         function onScanSuccess(decodedText) {
             let match = decodedText.match(/\d{10,}/);
             let processed = match ? match[0] : decodedText;
-            
             if (codes.some(item => item.text === processed)) {
                 showMsg('dup-msg');
                 return;
             }
-
-            // Форматируем дату и время (07.04.2026, 17:45:01)
+            // Добавляем секунды в формат времени
             const now = new Date();
-            const dateTimeStr = now.toLocaleString('ru-RU', { 
-                day: '2-digit', month: '2-digit', year: 'numeric', 
-                hour: '2-digit', minute: '2-digit', second: '2-digit' 
-            });
-
-            codes.push({ text: processed, time: dateTimeStr });
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            codes.push({ text: processed, time: timeStr });
             localStorage.setItem('wb_codes_v3', JSON.stringify(codes));
             
-            beep.play().catch(() => {});
+            beep.play
+().catch(() => {});
             renderList();
         }
-
         function renderList() {
             const list = document.getElementById('scanned-codes');
             list.innerHTML = '';
@@ -121,10 +107,11 @@
             });
             document.getElementById('count').innerText = codes.length;
         }
-
         async function copyToClipboard() {
             if (!codes.length) return;
-            const textToCopy = codes.map(c => `${c.text} [${c.time}]`).join('\n');
+            // Форматируем строку: Код - Время
+            const textToCopy = codes.map
+(c => `${c.text} [${c.time}]`).join('\n');
             
             try {
                 await navigator.clipboard.writeText(textToCopy);
@@ -133,23 +120,25 @@
                 const textArea = document.createElement("textarea");
                 textArea.value = textToCopy;
                 document.body.appendChild(textArea);
-                textArea.select();
+                textArea.select
+();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
                 showMsg('toast-msg');
             }
         }
-
         function downloadTxt() {
             if (!codes.length) return;
-            const content = codes.map(c => `${c.text} | ${c.time}`).join('\n');
+            const content = codes.map
+(c => `${c.text} | ${c.time}`).join('\n');
             const b = new Blob([content], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(b);
-            a.download = `WB_Export_${new Date().getTime()}.txt`;
-            a.click();
+            a.download
+ = `WB_Export_${new Date().getTime()}.txt`;
+            a.click
+();
         }
-
         function clearList() {
             if (confirm("Удалить весь список?")) {
                 codes = [];
@@ -157,22 +146,17 @@
                 renderList();
             }
         }
-
         function showMsg(id) {
             const el = document.getElementById(id);
             el.style.display = 'block';
             setTimeout(() => el.style.display = 'none', 2000);
         }
-
         function checkTorch() {
             try {
                 const track = html5QrCode.getRunningTrackCapabilities();
-                if (track && track.torch) {
-                    document.getElementById('torch-button').style.display = 'block';
-                }
+                if (track && track.torch) document.getElementById('torch-button').style.display = 'block';
             } catch(e) {}
         }
-
         async function toggleTorch() {
             isTorchOn = !isTorchOn;
             try {
