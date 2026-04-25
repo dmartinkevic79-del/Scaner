@@ -2,224 +2,299 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>WB Scanner Pro</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }
-        #reader { width: 100%; max-width: 500px; margin: 0 auto; border-radius: 24px; overflow: hidden; border: 2px solid #333; background: #111; }
-        .controls { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-        
-        button { padding: 18px; border: none; border-radius: 16px; font-weight: 700; cursor: pointer; font-size: 16px; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-        button:active { opacity: 0.7; transform: scale(0.98); }
-        
-        .btn-start { background: #af52de; color: white; width: 100%; }
-        .btn-copy { background: #af52de; color: white; }
-        .row { display: flex; gap: 10px; }
-        .btn-download { background: #1c1c1e; color: #32d74b; border: 1px solid #32d74b; flex: 1; }
-        .btn-clear { background: #1c1c1e; color: #ff453a; border: 1px solid #ff453a; flex: 1; }
-        .btn-torch { background: #ffd60a; color: #000; display: none; }
-        
-        #list-container { margin-top: 25px; background: #1c1c1e; border-radius: 24px; padding: 20px; }
-        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .count-label { color: #8e8e93; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        .count-value { color: #32d74b; font-size: 28px; font-weight: 800; }
-        
-        ul { list-style: none; padding: 0; margin: 0; }
-        li { 
-            display: flex; flex-direction: column; justify-content: center;
-            padding: 12px 0; border-top: 1px solid #2c2c2e;
+        :root {
+            --bg-color: #000;
+            --accent-blue: #00d4ff;
+            --accent-green: #2ecc71;
+            --glass-border: rgba(255, 255, 255, 0.12);
         }
-        .code-text { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-        .time-text { font-size: 12px; color: #636366; font-family: monospace; }
-        
-        .msg { 
-            position: fixed; top: 10%; left: 50%; transform: translateX(-50%); 
-            padding: 16px 32px; border-radius: 20px; display: none; z-index: 1000; 
-            font-weight: 600; text-align: center; width: 80%; backdrop-filter: blur(10px);
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg-color); 
+            color: #fff; 
+            margin: 0; 
+            padding: 20px; 
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .toast { background: rgba(50, 215, 75, 0.9); color: #fff; }
-        .dup-error { background: rgba(255, 69, 58, 0.9); color: #fff; }
+        
+        .scanner-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 30px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: #050505;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        #reader { width: 100%; }
+
+        .scanner-laser {
+            position: absolute;
+            top: 25%;
+            left: 15%;
+            width: 70%;
+            height: 2px;
+            background: rgba(0, 212, 255, 0.5); 
+            box-shadow: 0 0 15px 3px rgba(0, 212, 255, 0.4); 
+            z-index: 10;
+            display: none;
+            pointer-events: none;
+            animation: scanning 3.5s infinite ease-in-out; 
+        }
+
+        @keyframes scanning {
+            0% { top: 25%; }
+            50% { top: 75%; }
+            100% { top: 25%; }
+        }
+
+        #status-overlay {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(255, 150, 0, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 150, 0, 0.3);
+            color: #fff;
+            padding: 20px 40px;
+            border-radius: 25px;
+            font-weight: 800;
+            font-size: 18px;
+            z-index: 10000;
+            display: none;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8), 0 0 20px rgba(255, 150, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #status-overlay.active { display: block; transform: translate(-50%, -50%) scale(1); }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .controls { display: flex; flex-direction: column; gap: 16px; margin-top: 25px; }
+        
+        button { 
+            padding: 20px; 
+            border-radius: 20px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            font-size: 15px; 
+            transition: all 0.3s ease; 
+            text-transform: uppercase; 
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: #fff;
+            background-size: 200% 200%;
+            animation: gradientShift 5s infinite ease;
+            letter-spacing: 1px;
+        }
+
+        button:active { transform: scale(0.96); filter: brightness(1.2); }
+
+        .btn-start { background-image: linear-gradient(135deg, #6e2796, #a64dff, #6e2796); box-shadow: 0 8px 25px rgba(110, 39, 150, 0.3); }
+        .btn-copy { background-image: linear-gradient(135deg, #1e8449, #2ecc71, #1e8449); box-shadow: 0 8px 25px rgba(30, 132, 73, 0.3); }
+        .btn-clear { background: rgba(255, 255, 255, 0.05); color: #888; animation: none; }
+        
+        .btn-torch { 
+            background-image: linear-gradient(135deg, rgba(255, 213, 79, 0.2), rgba(255, 179, 0, 0.05));
+            border-color: rgba(255, 213, 79, 0.3);
+            box-shadow: 0 8px 25px rgba(255, 213, 79, 0.15);
+            color: #ffd54f;
+            animation: none; 
+            display: none; 
+        }
+
+        #list-container { 
+            margin-top: 25px; 
+            background: rgba(255, 255, 255, 0.03); 
+            border-radius: 28px; 
+            padding: 24px; 
+            border: 1px solid var(--glass-border);
+        }
+
+        .status-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+        .count-value { color: var(--accent-green); font-size: 34px; font-weight: 900; }
+        
+        ul { list-style: none; padding: 0; margin-top: 15px; }
+        li { padding: 18px 0; border-top: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; }
+        .code-text { font-size: 18px; font-weight: 600; color: #eee; }
+        .time-text { font-size: 12px; color: #555; }
+
+        .footer { 
+            text-align: center; font-size: 11px; color: #aaa; 
+            margin: 45px 0 25px 0; text-transform: uppercase; 
+            letter-spacing: 2px; font-weight: 700;
+        }
+
+        #flash-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 212, 255, 0.2); 
+            z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+        }
+        .flash-active { opacity: 1 !important; }
     </style>
 </head>
 <body>
-    <div id="toast-msg" class="msg toast">✅ СПИСОК СКОПИРОВАН</div>
-    <div id="dup-msg" class="msg dup-error">⚠️ УЖЕ В СПИСКЕ</div>
-    
-    <div id="reader"></div>
-    
+    <div id="flash-overlay"></div>
+    <div id="status-overlay">⚠️ УЖЕ В СПИСКЕ</div>
+
+    <div class="scanner-wrapper">
+        <div id="reader"></div>
+        <div id="laser" class="scanner-laser"></div>
+    </div>
+
     <div class="controls">
         <button id="start-btn" class="btn-start" onclick="initScanner()">🚀 ЗАПУСТИТЬ СКАНЕР</button>
-        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ВКЛЮЧИТЬ ФОНАРИК</button>
+        <button id="torch-button" class="btn-torch" onclick="toggleTorch()">🔦 ФОНАРИК</button>
         <button class="btn-copy" onclick="copyToClipboard()">📋 КОПИРОВАТЬ СПИСОК</button>
-        <div class="row">
-            <button class="btn-download" onclick="downloadTxt()">СКАЧАТЬ .TXT</button>
-            <button class="btn-clear" onclick="clearList()">ОЧИСТИТЬ</button>
-        </div>
+        <button class="btn-clear" onclick="clearList()">🗑️ ОЧИСТИТЬ СПИСОК</button>
     </div>
 
     <div id="list-container">
         <div class="status-bar">
-            <span class="count-label">Считано кодов</span>
+            <span style="color: #666; font-weight: 800; font-size: 12px;">ОБРАБОТАНО КОДОВ</span>
             <span id="count" class="count-value">0</span>
         </div>
         <ul id="scanned-codes"></ul>
     </div>
 
+    <div class="footer">DEVELOPED BY D. MARTINKEVICH FOR SOFRINOKBT</div>
+
     <script>
-        // Инициализация данных
-        let codes = [];
-        try {
-            const saved = localStorage.getItem('wb_codes_v3');
-            codes = saved ? JSON.parse(saved) : [];
-        } catch (e) { codes = []; }
-
+        const STORAGE_KEY = 'wb_scanner_v15_stable';
+        let codes = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         let html5QrCode = null;
-        let isTorchOn = false;
-        const beep = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+        let lastScanTime = 0;
+        const SCAN_DELAY = 2200; 
 
-        // Отрисовка при загрузке
-        window.onload = () => { renderList(); };
+        window.onload = () => renderList();
 
-        async function initScanner() {
-            const btn = document.getElementById('start-btn');
-            if (html5QrCode) return; // Если уже создан, не плодим копии
-
-            btn.innerText = "ПОДКЛЮЧЕНИЕ...";
-            html5QrCode = new Html5Qrcode("reader");
-
-            const config = { fps: 20, qrbox: { width: 250, height: 250 } };
-
-            try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config, 
-                    onScanSuccess
-                );
-                btn.style.display = 'none';
-                // Проверка фонарика через небольшую паузу
-                setTimeout(checkTorch, 1500);
-            } catch (err) {
-                console.error(err);
-                btn.innerText = "ОШИБКА: НЕТ ДОСТУПА";
-                html5QrCode = null;
-            }
+        function showDuplicateWarning() {
+            const el = document.getElementById('status-overlay');
+            el.classList.add('active');
+            setTimeout(() => { el.classList.remove('active'); }, 2000);
         }
 
-        function onScanSuccess(decodedText) {
-            // Ищем число от 10 знаков (артикул WB) или берем весь текст
-            let match = decodedText.match(/\d{10,}/);
-            let processed = match ? match[0] : decodedText;
+        async function initScanner() {
+            if (html5QrCode) { try { await html5QrCode.stop(); } catch(e) {} }
+            html5QrCode = new Html5Qrcode("reader");
             
-            // Проверка на дубликат
-            if (codes.some(item => item.text === processed)) {
-                showMsg('dup-msg');
-                return;
-            }
+            const config = {
+                fps: 25,
+                qrbox: (vw, vh) => {
+                    let s = Math.floor(Math.min(vw, vh) * 0.75);
+                    return { width: s, height: s };
+                },
+                aspectRatio: 1.0
+            };
 
-            // Форматируем текущую дату и время
-            const now = new Date();
-            const timeStr = now.toLocaleString('ru-RU', {
-                day: '2-digit', month: '2-digit', year: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, config, (text) => {
+                    const now = Date.now();
+                    if (now - lastScanTime < SCAN_DELAY) return;
 
-            // Сохраняем
-            codes.push({ text: processed, time: timeStr });
-            localStorage.setItem('wb_codes_v3', JSON.stringify(codes));
-            
-            // Звук (с обработкой блокировки браузером)
-            beep.play().catch(() => {});
-            
-            renderList();
+                    let cleaned = text.trim();
+                    let match = cleaned.match(/\d{10,}/);
+                    let processed = match ? match[0] : cleaned;
+
+                    if (codes.some(c => c.text === processed)) {
+                        showDuplicateWarning();
+                        lastScanTime = now;
+                        return;
+                    }
+
+                    codes.push({ 
+                        text: processed, 
+                        time: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}) 
+                    });
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(codes));
+                    
+                    const flash = document.getElementById('flash-overlay');
+                    flash.classList.add('flash-active');
+                    setTimeout(() => { flash.classList.remove('flash-active'); }, 150);
+
+                    renderList();
+                    new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play().catch(()=>{});
+                    lastScanTime = now;
+                });
+
+                document.getElementById('start-btn').style.display = 'none';
+                document.getElementById('laser').style.display = 'block';
+                setTimeout(checkTorch, 1000);
+            } catch (err) { alert("Ошибка камеры: " + err); }
         }
 
         function renderList() {
             const list = document.getElementById('scanned-codes');
-            if (!list) return;
-            
             list.innerHTML = '';
-            // Новые сверху
             [...codes].reverse().forEach(item => {
                 const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="code-text">${item.text}</span>
-                    <span class="time-text">${item.time}</span>
-                `;
+                li.innerHTML = `<span class="code-text">${item.text}</span><span class="time-text">${item.time}</span>`;
                 list.appendChild(li);
             });
-            
             document.getElementById('count').innerText = codes.length;
         }
 
-        async function copyToClipboard() {
+        // --- ОБНОВЛЕННАЯ ФУНКЦИЯ КОПИРОВАНИЯ ---
+        function copyToClipboard() {
             if (!codes.length) return;
-            const textToCopy = codes.map(c => `${c.text} [${c.time}]`).join('\n');
             
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(textToCopy);
-                } else {
-                    throw new Error('Clipboard API unavailable');
-                }
-                showMsg('toast-msg');
-            } catch (err) {
-                // Запасной вариант через textarea
-                const textArea = document.createElement("textarea");
-                textArea.value = textToCopy;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showMsg('toast-msg');
-            }
-        }
-
-        function downloadTxt() {
-            if (!codes.length) return;
-            const content = codes.map(c => `${c.text} | ${c.time}`).join('\n');
-            const b = new Blob([content], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(b);
-            a.download = `WB_Export_${new Date().getTime()}.txt`;
-            a.click();
-            URL.revokeObjectURL(a.href);
+            // Получаем текущую дату
+            const dateStr = new Date().toLocaleDateString('ru-RU');
+            
+            // Формируем красивый заголовок
+            let report = `ОТЧЕТ ЗА ${dateStr}\n`;
+            report += `Всего кодов: ${codes.length}\n`;
+            report += `------------------------\n`;
+            
+            // Добавляем коды вместе со временем (через тире)
+            report += codes.map(c => `${c.text} - ${c.time}`).join('\n');
+            
+            navigator.clipboard.writeText(report).then(() => alert("Отчет с датой и временем скопирован!"));
         }
 
         function clearList() {
-            if (confirm("Удалить весь список?")) {
+            if (confirm("Удалить всё?")) {
                 codes = [];
-                localStorage.removeItem('wb_codes_v3');
+                localStorage.removeItem(STORAGE_KEY);
                 renderList();
             }
         }
 
-        function showMsg(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.style.display = 'block';
-            setTimeout(() => el.style.display = 'none', 2000);
-        }
-
         function checkTorch() {
-            try {
-                const track = html5QrCode.getRunningTrackCapabilities();
-                if (track && track.torch) {
-                    document.getElementById('torch-button').style.display = 'block';
-                }
-            } catch(e) { console.log("Фонарик не поддерживается"); }
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const track = html5QrCode.getRunningTrackCapabilities();
+            if (track?.torch || isAndroid) {
+                document.getElementById('torch-button').style.display = 'block';
+            }
         }
 
         async function toggleTorch() {
-            if (!html5QrCode) return;
-            isTorchOn = !isTorchOn;
+            const btn = document.getElementById('torch-button');
+            const isOff = btn.innerText.includes("ФОНАРИК");
             try {
-                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isTorchOn }] });
-                document.getElementById('torch-button').innerText = isTorchOn ? "❌ ВЫКЛЮЧИТЬ" : "🔦 ВКЛЮЧИТЬ ФОНАРИК";
-            } catch (e) {
-                console.error("Ошибка фонарика", e);
+                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: isOff }] });
+                btn.innerText = isOff ? "❌ ВЫКЛЮЧИТЬ" : "🔦 ФОНАРИК";
+                btn.style.boxShadow = isOff ? "0 8px 35px rgba(255, 213, 79, 0.4)" : "";
+            } catch(e) {
+                alert("Увы, прошивка вашего устройства аппаратно блокирует доступ к фонарику для браузера.");
             }
         }
     </script>
 </body>
 </html>
+
